@@ -1,0 +1,41 @@
+@import "tailwindcss";
+
+/* 1. Ensure absolute full screen viewport height */
+html, body, #root {
+  height: 100vh !important;
+  width: 100vw !important;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+/* 2. CRUCIAL: Force Leaflet container to fill parent container */
+.leaflet-container {
+  width: 100% !important;
+  height: 100% !important;
+  background-color: #020617 !important; /* Dark fallback while tiles load */
+  z-index: 0;
+}
+
+/* 3. Leaflet Popup Styling Adjustments */
+.leaflet-popup-content-wrapper {
+  background: #ffffff !important;
+  color: #0f172a !important;
+  border-radius: 8px !important;
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.4) !important;
+  padding: 4px !important;
+}
+
+.leaflet-popup-tip {
+  background: #ffffff !important;
+}
+
+/* 4. Center Custom Marker Icons */
+.custom-station-icon, .custom-terminus-icon {
+  background: transparent !important;
+  border: none !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
