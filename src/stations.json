@@ -49240,5 +49240,11 @@
     "name": "Kartoli Punjab",
     "lat": 31.8539306,
     "lng": 75.9502888
+  },
+  "MAO": {
+    "code": "MAO",
+    "name": "Madgaon Junction",
+    "lat": 15.2677,
+    "lng": 73.9711
   }
 }

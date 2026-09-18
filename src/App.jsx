@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { MapContainer, TileLayer, Marker, Popup, Polyline, ZoomControl, useMapEvent } from 'react-leaflet';
 import L from 'leaflet';
-import { Train, MapPin, Clock, Navigation, Layers } from 'lucide-react';
+import { Train, MapPin, Clock, Navigation, Layers, Search, X } from 'lucide-react';
 import 'leaflet/dist/leaflet.css';
 
 // Import your stations JSON file
@@ -206,7 +206,7 @@ const ROUTE_DEFINITIONS = [
     color: "#06b6d4",
     distance: "586 km",
     duration: "10h 05m",
-    codes: ["CSMT", "DR", "TNA", "PNVL", "KHED", "RN", "KKW", "MAO"]
+    codes: ["CSMT", "DR", "TNA", "PNVL", "KHED", "RN", "KKW", "THVM", "MAO"]
   },
   {
     id: "22447",
@@ -343,8 +343,19 @@ const ROUTE_DEFINITIONS = [
     distance: "458 km",
     duration: "5h 40m",
     codes: ["HWH", "DGR", "ASN", "DHN", "KQR", "GAYA"]
+  },
+  {
+    id: "26481",
+    name: "Jodhpur - Delhi Cantt Vande Bharat (via Jaipur)",
+    color: "#0ea5e9",
+    distance: "604 km",
+    duration: "8h 05m",
+    codes: ["JU", "MTD", "DNA", "MKN", "FL", "JP", "AWR", "RE", "GGN", "DEC"]
   }
 ];
+
+// Free key from https://carto.com/basemaps/apikey — set VITE_CARTO_API_KEY in .env.local
+const CARTO_API_KEY = import.meta.env.VITE_CARTO_API_KEY || '';
 
 function MapBackgroundClickHandler({ onReset }) {
   useMapEvent('click', (e) => {
@@ -359,6 +370,7 @@ function MapBackgroundClickHandler({ onReset }) {
 
 export default function App() {
   const [selectedRouteId, setSelectedRouteId] = useState('ALL');
+  const [stationQuery, setStationQuery] = useState('');
 
   const handleRouteClick = (routeId) => {
     setSelectedRouteId((current) => (current === routeId ? 'ALL' : routeId));
@@ -366,6 +378,11 @@ export default function App() {
 
   const handleMapReset = () => {
     setSelectedRouteId('ALL');
+  };
+
+  const handleSelectSearchResult = (routeId) => {
+    setSelectedRouteId(routeId);
+    setStationQuery('');
   };
 
   // Process and map station codes to coordinates safely
@@ -398,6 +415,26 @@ export default function App() {
       };
     });
   }, []);
+
+  // Find stations matching the search query, grouped with their route
+  const stationSearchResults = useMemo(() => {
+    const query = stationQuery.trim().toLowerCase();
+    if (!query) return [];
+
+    const results = [];
+    processedRoutes.forEach(route => {
+      if (!route.isValid) return;
+      route.stations.forEach(station => {
+        if (
+          station.code.toLowerCase().includes(query) ||
+          station.name.toLowerCase().includes(query)
+        ) {
+          results.push({ route, station });
+        }
+      });
+    });
+    return results.slice(0, 20);
+  }, [stationQuery, processedRoutes]);
 
   // Filter routes based on dropdown selection
   const activeRoutes = useMemo(() => {
@@ -444,12 +481,13 @@ export default function App() {
             center={[19.3826, 72.8320]} // Centered around Vasai Road / Naigaon region
             zoom={6}
             zoomControl={false}
+            preferCanvas={true}
             className="h-full w-full bg-slate-950"
           >
             <MapBackgroundClickHandler onReset={handleMapReset} />
             <TileLayer
-              attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-              url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
+              attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>, &copy; <a href="https://carto.com/attributions">CARTO</a>'
+              url={`https://basemaps.cartocdn.com/rastertiles/dark_all/{z}/{x}/{y}.png?key=${CARTO_API_KEY}`}
             />
             <ZoomControl position="bottomright" />
 
@@ -511,6 +549,49 @@ export default function App() {
 
         {/* Sidebar */}
         <div className="absolute top-4 left-4 z-10 w-80 bg-slate-800/90 backdrop-blur-md p-4 rounded-xl border border-slate-700 shadow-xl max-h-[85vh] overflow-y-auto">
+          {/* Station Search */}
+          <div className="relative mb-4">
+            <Search className="h-4 w-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+            <input
+              type="text"
+              value={stationQuery}
+              onChange={(e) => setStationQuery(e.target.value)}
+              placeholder="Search station name or code..."
+              className="w-full bg-slate-700 text-slate-100 border border-slate-600 rounded-lg pl-9 pr-8 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500 placeholder:text-slate-400"
+            />
+            {stationQuery && (
+              <button
+                onClick={() => setStationQuery('')}
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-200"
+                aria-label="Clear search"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            )}
+
+            {stationQuery.trim() && (
+              <div className="absolute left-0 right-0 mt-2 bg-slate-700 border border-slate-600 rounded-lg shadow-xl max-h-64 overflow-y-auto z-20">
+                {stationSearchResults.length === 0 ? (
+                  <div className="px-3 py-2 text-xs text-slate-400">No stations match "{stationQuery}".</div>
+                ) : (
+                  stationSearchResults.map(({ route, station }, idx) => (
+                    <button
+                      key={`${route.id}-${station.code}-${idx}`}
+                      onClick={() => handleSelectSearchResult(route.id)}
+                      className="w-full text-left px-3 py-2 text-xs hover:bg-slate-600/80 border-b border-slate-600/60 last:border-b-0 flex items-start gap-2"
+                    >
+                      <span className="w-2.5 h-2.5 rounded-full mt-0.5 shrink-0" style={{ backgroundColor: route.color }}></span>
+                      <span>
+                        <span className="block font-medium text-slate-100">{station.name} ({station.code})</span>
+                        <span className="block text-slate-400">{route.name}</span>
+                      </span>
+                    </button>
+                  ))
+                )}
+              </div>
+            )}
+          </div>
+
           <h2 className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-3 flex items-center gap-2">
             <Layers className="h-4 w-4 text-orange-400" /> Active Route Details
           </h2>
