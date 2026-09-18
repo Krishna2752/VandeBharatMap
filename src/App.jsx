@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { MapContainer, TileLayer, Marker, Popup, Polyline, ZoomControl } from 'react-leaflet';
+import { MapContainer, TileLayer, Marker, Popup, Polyline, ZoomControl, useMapEvent } from 'react-leaflet';
 import L from 'leaflet';
 import { Train, MapPin, Clock, Navigation, Layers } from 'lucide-react';
 import 'leaflet/dist/leaflet.css';
@@ -346,6 +346,17 @@ const ROUTE_DEFINITIONS = [
   }
 ];
 
+function MapBackgroundClickHandler({ onReset }) {
+  useMapEvent('click', (e) => {
+    const target = e.originalEvent.target;
+    const clickedOnRoute = target.closest('.leaflet-interactive');
+    if (!clickedOnRoute) {
+      onReset();
+    }
+  });
+  return null;
+}
+
 export default function App() {
   const [selectedRouteId, setSelectedRouteId] = useState('ALL');
 
@@ -434,19 +445,8 @@ export default function App() {
             zoom={6}
             zoomControl={false}
             className="h-full w-full bg-slate-950"
-            whenReady={() => {
-              const map = document.querySelector('.leaflet-container');
-              if (map) {
-                map.addEventListener('click', (event) => {
-                  const target = event.target;
-                  const clickedOnRoute = target.closest('.leaflet-interactive');
-                  if (!clickedOnRoute) {
-                    handleMapReset();
-                  }
-                });
-              }
-            }}
           >
+            <MapBackgroundClickHandler onReset={handleMapReset} />
             <TileLayer
               attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
               url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
